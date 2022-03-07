@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0
 pragma solidity >=0.8.0 <0.9.0;
 
-import "@openzeppelin/contracts/token/ERC1155/IERC1155.sol";
 import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/utils/Context.sol";
@@ -26,20 +25,7 @@ contract Ballot is Context {
 
     address public chairperson;
 
-    struct ERC1155Whitelist {
-        IERC1155 address_;
-        uint256 tokenId;
-    }
-    ERC1155Whitelist erc1155whitelist_;
     IERC721 erc721whitelist_;
-
-    function erc1155whitelist()
-        public
-        view
-        returns (IERC1155 addr_, uint256 tokenId)
-    {
-        return (erc1155whitelist_.address_, erc1155whitelist_.tokenId);
-    }
 
     function erc721whitelist() public view returns (IERC721 addr_) {
         return erc721whitelist_;
@@ -53,16 +39,10 @@ contract Ballot is Context {
     Proposal[] public proposals;
 
     /// Create a new ballot to choose one of `proposalId`.
-    constructor(
-        uint16[] memory proposalIds,
-        IERC1155 address1155,
-        uint256 tokenId1155,
-        IERC721 address721
-    ) {
+    constructor(uint16[] memory proposalIds, IERC721 address721) {
         chairperson = msg.sender;
 
         voters[chairperson].weight = 1;
-        updateERC1155ToWhitelist(address1155, tokenId1155);
         updateERC721ToWhitelist(address721);
 
         // For each of the provided proposal names,
@@ -102,24 +82,6 @@ contract Ballot is Context {
         // explanation about what went wrong.
 
         erc721whitelist_ = address_;
-    }
-
-    function updateERC1155ToWhitelist(IERC1155 address_, uint256 tokenId)
-        public
-        onlyChairPerson
-    {
-        // If the first argument of `require` evaluates
-        // to `false`, execution terminates and all
-        // changes to the state and to Ether balances
-        // are reverted.
-        // This used to consume all gas in old EVM versions, but
-        // not anymore.
-        // It is often a good idea to use `require` to check if
-        // functions are called correctly.
-        // As a second argument, you can also provide an
-        // explanation about what went wrong.
-
-        erc1155whitelist_ = ERC1155Whitelist(address_, tokenId);
     }
 
     /// Delegate your vote to the voter `to`.
@@ -169,17 +131,10 @@ contract Ballot is Context {
         address caller = _msgSender();
         Voter storage sender = voters[caller];
 
-        uint256 balance1 = erc1155whitelist_.address_.balanceOf(
-            caller,
-            erc1155whitelist_.tokenId
+        require(
+            erc721whitelist().balanceOf(caller) > 0,
+            "Has no right to vote"
         );
-
-        uint256 balance2 = erc721whitelist().balanceOf(caller);
-
-        // emit Balance(balance1);
-        emit Balance(balance2);
-
-        // require(balance > 0, "Has no right to vote");
         // require(!sender.voted, "Already voted.");
         sender.voted = true;
         sender.vote = proposal;
