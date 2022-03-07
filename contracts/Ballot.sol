@@ -29,6 +29,8 @@ contract Ballot is Context {
     address public chairperson;
 
     //// ERC721 (NFT) address to be whitelisted for voting on proposals. Kept private to keep a pattern
+    //// Removes need for "giveRightToVote" completly, by giving right to vote to every one that holds an ERC721 NFT, stored in this variable.
+    //// Think of this ERC721 contract as a Governance NFT
     IERC721 private erc721whitelist_;
 
     //// returns address of ERC721 contract that is currently whitelisted for voting on proposals
