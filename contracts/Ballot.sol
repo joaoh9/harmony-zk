@@ -2,7 +2,6 @@
 pragma solidity >=0.8.0 <0.9.0;
 
 import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/utils/Context.sol";
 
 /// @title Voting with delegation.
@@ -10,6 +9,7 @@ contract Ballot is Context {
     // This declares a new complex type which will
     // be used for variables later.
     // It will represent a single voter.
+    //// All previous uint variables were changed to uint256 ones. To make it more transparent.
     struct Voter {
         uint256 weight; // weight is accumulated by delegation
         bool voted; // if true, that person already voted
@@ -19,14 +19,19 @@ contract Ballot is Context {
 
     // This is a type for a single proposal.
     struct Proposal {
-        uint16 proposalId; // id reference (up to 16 bits)
+        //// proposal Id is now a 16 bit integer.
+        ////  A reference to an off-chain proposal
+        //// This was modified in order to save gas
+        uint16 proposalId;
         uint256 voteCount; // number of accumulated votes
     }
 
     address public chairperson;
 
-    IERC721 erc721whitelist_;
+    //// ERC721 (NFT) address to be whitelisted for voting on proposals. Kept private to keep a pattern
+    IERC721 private erc721whitelist_;
 
+    //// returns address of ERC721 contract that is currently whitelisted for voting on proposals
     function erc721whitelist() public view returns (IERC721 addr_) {
         return erc721whitelist_;
     }
@@ -39,10 +44,13 @@ contract Ballot is Context {
     Proposal[] public proposals;
 
     /// Create a new ballot to choose one of `proposalId`.
+    //// proposalName is now proposalId because we switched from string to uint256, as mentioned in line 22
     constructor(uint16[] memory proposalIds, IERC721 address721) {
         chairperson = msg.sender;
 
         voters[chairperson].weight = 1;
+
+        // constructor receives a ERC721 address to be whitelisted
         updateERC721ToWhitelist(address721);
 
         // For each of the provided proposal names,
@@ -58,9 +66,8 @@ contract Ballot is Context {
         }
     }
 
-    // Give `voter` the right to vote on this ballot.
-    // May only be called by `chairperson`.
-
+    //// Unifies require for "only chairperson" with a modifier
+    //// Should make code easier to read
     modifier onlyChairPerson() {
         require(
             msg.sender == chairperson,
@@ -69,18 +76,9 @@ contract Ballot is Context {
         _;
     }
 
+    //// only callable by chair person.
+    //// modifies ERC721 contract address to be whitelisted for voting
     function updateERC721ToWhitelist(IERC721 address_) public onlyChairPerson {
-        // If the first argument of `require` evaluates
-        // to `false`, execution terminates and all
-        // changes to the state and to Ether balances
-        // are reverted.
-        // This used to consume all gas in old EVM versions, but
-        // not anymore.
-        // It is often a good idea to use `require` to check if
-        // functions are called correctly.
-        // As a second argument, you can also provide an
-        // explanation about what went wrong.
-
         erc721whitelist_ = address_;
     }
 
@@ -131,11 +129,15 @@ contract Ballot is Context {
         address caller = _msgSender();
         Voter storage sender = voters[caller];
 
+
+        //// instead of checking for voter weight, and right to vote,
+        //// every user that holds one or more ERC721 NFT can vote.
+        //// this reduces gas fees by removing need to register every voter
         require(
             erc721whitelist().balanceOf(caller) > 0,
             "Has no right to vote"
         );
-        // require(!sender.voted, "Already voted.");
+        require(!sender.voted, "Already voted.");
         sender.voted = true;
         sender.vote = proposal;
 
@@ -160,7 +162,7 @@ contract Ballot is Context {
 
     // Calls winningProposal() function to get the index
     // of the winner contained in the proposals array and then
-    // returns the name of the winner
+    //// returns the id of the proposal
     function winnerId() external view returns (uint16 winnerId_) {
         winnerId_ = proposals[winningProposal()].proposalId;
     }
