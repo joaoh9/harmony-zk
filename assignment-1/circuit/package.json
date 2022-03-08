@@ -1,0 +1,23 @@
+{
+  "name": "assignment-1",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "compile": "circom circuit.circom --r1cs --wasm --sym --c",
+    "witness": "node circuit_js/generate_witness.js circuit_js/circuit.wasm input.json witness.wtns",
+    "compute-witness": "node circuit_js/generate_witness.js circuit_js/circuit.wasm input.json witness.wtns",
+    "powers-of-tau": "snarkjs powersoftau new bn128 12 pot12_0000.ptau -v",
+    "cerimony-contribution": "snarkjs powersoftau contribute pot12_0000.ptau pot12_0001.ptau --name=\"First contribution\" -v",
+    "phase-2": "snarkjs powersoftau prepare phase2 pot12_0001.ptau pot12_final.ptau -v",
+    "zkey": "snarkjs groth16 setup circuit.r1cs pot12_final.ptau circuit_0000.zkey",
+    "phase-2-contribution": "snarkjs zkey contribute circuit_0000.zkey circuit_0001.zkey --name=\"1st Contributor Name\" -v",
+    "verification-key": "snarkjs zkey export verificationkey circuit_0001.zkey verification_key.json",
+    "gen-zk-proof": "snarkjs groth16 prove circuit_0001.zkey witness.wtns proof.json public.json",
+    "verify-proof": "snarkjs groth16 verify verification_key.json public.json proof.json",
+    "gen-sol-verifier": "snarkjs zkey export solidityverifier circuit_0001.zkey verifier.sol",
+    "gen-call": "snarkjs generatecall"
+  },
+  "author": "",
+  "license": "ISC"
+}
